@@ -1,68 +1,26 @@
 const repeatEvent = (function () {
-  function toMsConverter (date) {
-    const dateForParse = date.slice(0, 10) + 'T' + date.slice(11, 17)
-    return Date.parse(dateForParse)
-  }
-
-  function runEventTimer (event) {
+  runRepeatTimer()
+  function runRepeatTimer () {
     (function loop () {
+      let events = eventCalendar.getAllEvents()
       let now = new Date()
-      const date = new Date(toMsConverter(event.date))
-      const year = date.getFullYear()
-      const month = date.getMonth()
-      const dateDay = date.getDate()
-      const hours = date.getHours()
-      const minutes = date.getMinutes()
-      const func = new Function(event.callback.slice(11, event.callback.length))
-      if (now.getFullYear() === year && now.getMonth() === month && now.getDate() === dateDay &&
-        now.getHours() === hours && now.getMinutes() === minutes) {
-        func()
-      }
-      now = new Date() // allow for time passing
-      const delay = 60000 - (now % 60000) // exact ms to next minute interval
-      setTimeout(loop, delay)
-    })()
-  }
-
-  let events = eventsStorage.getAllEvents()
-  events.forEach(function (item) {
-    if (item.repeat === 'everyDay') {
-      const func = new Function(item.callback.slice(11, item.callback.length))
-      const date = new Date(toMsConverter(item.date))
-      const hours = date.getHours()
-      const minutes = date.getMinutes()
-      runTimer(func, hours, minutes)
-    }
-  })
-
-  events.forEach(function (item) {
-    if (typeof item.repeat === 'number') {
-      const func = new Function(item.callback.slice(11, item.callback.length))
-      const date = new Date(toMsConverter(item.date))
-      const hours = date.getHours()
-      const minutes = date.getMinutes()
-      runDayTimer(func, item.repeat, hours, minutes)
-    }
-  })
-
-  function runTimer (cb, hours, minutes) {
-    (function loop () {
-      let now = new Date()
-      if (now.getHours() === hours && now.getMinutes() === minutes) {
-        cb()
-      }
-      now = new Date()
-      const delay = 60000 - (now % 60000)
-      setTimeout(loop, delay)
-    })()
-  }
-
-  function runDayTimer (cb, day, hours, minutes) {
-    (function loop () {
-      let now = new Date()
-      if (now.getDay() === day && now.getHours() === hours && now.getMinutes() === minutes) {
-        cb()
-      }
+      events.forEach(function (event) {
+        if (event.repeat === 'everyDay' || typeof event.repeat === 'object') {
+          const hours = +event.date.slice(0, 2)
+          const minutes = +event.date.slice(3, 5)
+          const fun = new Function(event.callback.slice(11, event.callback.length))
+          if (now.getHours() === hours && now.getMinutes() === minutes && event.repeat === 'everyDay') {
+            fun()
+          } else if (typeof event.repeat === 'object') {
+            event.repeat.forEach(function (day) {
+              if (day === 7) day = 0
+              if (now.getDay() === day && now.getHours() === hours && now.getMinutes() === minutes) {
+                fun()
+              }
+            })
+          }
+        }
+      })
       now = new Date()
       const delay = 60000 - (now % 60000)
       setTimeout(loop, delay)
@@ -72,22 +30,12 @@ const repeatEvent = (function () {
     setEveryDayEvent: function (titleEvent, dateEvent, callback) {
       let repeatedEvent = eventCalendar.setEvent(titleEvent, dateEvent, callback)
       repeatedEvent.repeat = 'everyDay'
-      eventsStorage.updateLocalStorage()
-      const date = new Date(toMsConverter(dateEvent))
-      const dateHours = date.getHours()
-      const dateMinutes = date.getMinutes()
-      runTimer(callback, dateHours, dateMinutes)
+      eventsStorage.updateLocalStorage(eventCalendar.getAllEvents())
     },
-    setRepeatInWeekDayEvent: function (titleEvent, dateEvent, callback, dayOfWeek) {
+    setRepeatInWeekDayEvent: function (titleEvent, dateEvent, callback, daysOfWeek) {
       let repeatedEvent = eventCalendar.setEvent(titleEvent, dateEvent, callback)
-      repeatedEvent.repeat = dayOfWeek
-      eventsStorage.updateLocalStorage()
-      if (dayOfWeek === 7) dayOfWeek = 0
-      const date = new Date(toMsConverter(dateEvent))
-      const dateHours = date.getHours()
-      const dateMinutes = date.getMinutes()
-      runEventTimer(repeatedEvent)
-      runDayTimer(callback, dayOfWeek, dateHours, dateMinutes)
+      repeatedEvent.repeat = daysOfWeek
+      eventsStorage.updateLocalStorage(eventCalendar.getAllEvents())
     }
   }
 })()
