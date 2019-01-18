@@ -4,7 +4,7 @@ const eventsStorage = (function () {
       return JSON.parse(window.localStorage.getItem('events'))
     },
     updateLocalStorage: function (events) {
-      window.localStorage.clear()
+      window.localStorage.removeItem('events')
       window.localStorage.setItem('events', JSON.stringify(events))
     }
   }
@@ -15,12 +15,11 @@ const eventCalendar = (function () {
   if (window.localStorage.getItem('events') !== null) {
     events = eventsStorage.getAllEvents()
   }
-
   runEventsTimer()
   function runEventsTimer () {
     (function loop () {
       let now = new Date()
-      if (events.length > 0) {
+      if (window.localStorage.getItem('events') !== null) {
         let events = eventsStorage.getAllEvents()
         events.forEach(function (item) {
           if (item.repeat === 'no') {
@@ -57,17 +56,74 @@ const eventCalendar = (function () {
         repeat: 'no',
         extraFuncs: []
       }
+      if (window.localStorage.getItem('global') !== null) {
+        JSON.parse(window.localStorage.getItem('global')).forEach(function (func) {
+          event.extraFuncs.push(func)
+        })
+      }
+      events = eventsStorage.getAllEvents()
+      if (events === null) events = []
       events.push(event)
       eventsStorage.updateLocalStorage(events)
       return event
     },
+    getDayEvents: function () {
+      const date = new Date()
+      const day = date.getDate()
+      const year = date.getFullYear()
+      const month = date.getMonth()
+      const dayOfWeek = date.getDay()
+      let result = []
+      events.forEach(function (event) {
+        if (event.repeat === 'everyDay') {
+          result.push(event)
+        }
+        if (typeof event.repeat === 'object') {
+          event.repeat.forEach(function (day) {
+            if (day === dayOfWeek) {
+              result.push(event)
+            }
+          })
+        }
+        if (event.repeat === 'no') {
+          let dateEvent = new Date(toMsConverter(event.date))
+          if (dateEvent.getFullYear() === year && dateEvent.getMonth() === month && dateEvent.getDate() === day) {
+            result.push(event)
+          }
+        }
+      })
+      return result
+    },
+    getWeekEvents: function () {
+      const date = new Date()
+      const day = date.getDate()
+      const year = date.getFullYear()
+      const month = date.getMonth()
+      const dayOfWeek = date.getDay()
+      let result = []
+      events.forEach(function (event) {
+        if (event.repeat === 'everyDay' || typeof event.repeat === 'object') {
+          result.push(event)
+        }
+        if (event.repeat === 'no') {
+          let eventDate = new Date(toMsConverter(event.date))
+          let eventWeekDay = eventDate.getDay()
+          let n = 0
+          // дальше использовать функцию для интервала (которая еще не написана)
+        }
+      })
+    },
+    getMonthEvents: function () {
 
-    getEvents: function (startTime, endTime) {
-      const startMs = toMsConverter(startTime)
-      const endMs = toMsConverter(endTime)
+    },
+    getPeriodEvents: function (startTime, endTime) {
+      const startDate = new Date(toMsConverter(startTime))
+      const endDate = new Date(toMsConverter(endTime))
 
       return events.filter(function (event) {
-        return toMsConverter(event.date) >= startMs && toMsConverter(event.date) <= endMs
+        return toMsConverter(event.date) >= startMs &&
+          toMsConverter(event.date) <= endMs &&
+          event.repeat === 'everyDay'
       })
     },
 

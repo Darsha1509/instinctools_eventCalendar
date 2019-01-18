@@ -1,4 +1,20 @@
+const extraFuncsStorage = (function () {
+  return {
+    getAllFuncs: function () {
+      return JSON.parse(window.localStorage.getItem('global'))
+    },
+    updateLocalStorage: function (funcs) {
+      window.localStorage.removeItem('global')
+      window.localStorage.setItem('global', JSON.stringify(funcs))
+    }
+  }
+})()
+
 const extraFunctions = (function () {
+  let globalFuncs = []
+  if (window.localStorage.getItem('global') !== null) {
+    globalFuncs = extraFuncsStorage.getAllFuncs()
+  }
   function toMsConverter (date) {
     const dateForParse = date.slice(0, 10) + 'T' + date.slice(11, 17)
     return Date.parse(dateForParse)
@@ -75,16 +91,21 @@ const extraFunctions = (function () {
       eventCalendar.updateEvents()
     },
     forAllEvents: function (fun, timeMinutesInterval) {
-      let events = eventsStorage.getAllEvents()
       const extraFun = {
         func: String(fun),
         timeInterval: timeMinutesInterval
       }
-      events.forEach(function (event) {
-        event.extraFuncs.push(extraFun)
-      })
-      eventsStorage.updateLocalStorage(events)
-      eventCalendar.updateEvents()
+      globalFuncs = extraFuncsStorage.getAllFuncs()
+      if (globalFuncs === null) globalFuncs = []
+      globalFuncs.push(extraFun)
+      let events = eventCalendar.getAllEvents()
+      if (events.length > 0 && window.localStorage.getItem('events') !== null) {
+        events.forEach(function (event) {
+          event.extraFuncs.push(extraFun)
+        })
+        eventsStorage.updateLocalStorage(events)
+      }
+      extraFuncsStorage.updateLocalStorage(globalFuncs)
     }
   }
 })()
