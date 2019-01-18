@@ -1,79 +1,79 @@
-let extraFunctions = (function () {
+const extraFunctions = (function () {
   function toMsConverter (date) {
-    let dateForParse = date.slice(0, 10) + 'T' + date.slice(11, 17)
+    const dateForParse = date.slice(0, 10) + 'T' + date.slice(11, 17)
     return Date.parse(dateForParse)
   }
 
   let events = eventsStorage.getAllEvents()
   events.forEach(function (item) {
-    let eventDate = item.date
+    const eventDate = item.date
     if (item.repeat === 'no') {
       item.extraFuncs.forEach(function (item) {
-        let func = new Function(item.func.slice(11, item.func.length))
-        let funcDate = eventDate.substring(0, 11) + (+eventDate.substring(11, 13) - item.interval) + eventDate.substring(13, 17)
-        let funcTime = new Date(toMsConverter(funcDate))
-        checkDate(func, funcTime)
+        const func = new Function(item.func.slice(11, item.func.length))
+        const funcDate = eventDate.substring(0, 11) + (+eventDate.substring(11, 13) - item.interval) + eventDate.substring(13, 17)
+        const funcTime = new Date(toMsConverter(funcDate))
+        runEventTimer(func, funcTime)
       })
     } else if (item.repeat === 'everyDay') {
       item.extraFuncs.forEach(function (item) {
-        let func = new Function(item.func.slice(11, item.func.length))
-        let funcDate = eventDate.substring(0, 11) + (+eventDate.substring(11, 13) - item.interval) + eventDate.substring(13, 17)
-        let funcTime = new Date(toMsConverter(funcDate))
-        let funcHours = funcTime.getHours()
-        let funcMinutes = funcTime.getMinutes()
-        checkTime(func, funcHours, funcMinutes)
+        const func = new Function(item.func.slice(11, item.func.length))
+        const funcDate = eventDate.substring(0, 11) + (+eventDate.substring(11, 13) - item.interval) + eventDate.substring(13, 17)
+        const funcTime = new Date(toMsConverter(funcDate))
+        const funcHours = funcTime.getHours()
+        const funcMinutes = funcTime.getMinutes()
+        runTimer(func, funcHours, funcMinutes)
       })
     } else {
-      let day = item.repeat
+      const day = item.repeat
       item.extraFuncs.forEach(function (item) {
-        let func = new Function(item.func.slice(11, item.func.length))
-        let funcDate = eventDate.substring(0, 11) + (+eventDate.substring(11, 13) - item.interval) + eventDate.substring(13, 17)
-        let funcTime = new Date(toMsConverter(funcDate))
-        let funcHours = funcTime.getHours()
-        let funcMinutes = funcTime.getMinutes()
-        checkDay(func, day, funcHours, funcMinutes)
+        const func = new Function(item.func.slice(11, item.func.length))
+        const funcDate = eventDate.substring(0, 11) + (+eventDate.substring(11, 13) - item.interval) + eventDate.substring(13, 17)
+        const funcTime = new Date(toMsConverter(funcDate))
+        const funcHours = funcTime.getHours()
+        const funcMinutes = funcTime.getMinutes()
+        runDayTimer(func, day, funcHours, funcMinutes)
       })
     }
   })
 
-  function checkDate (cb, date) {
-    let year = date.getFullYear()
-    let month = date.getMonth()
-    let dateDay = date.getDate()
-    let hours = date.getHours()
-    let minutes = date.getMinutes();
+  function runEventTimer (cb, date) {
+    const year = date.getFullYear()
+    const month = date.getMonth()
+    const dateDay = date.getDate()
+    const hours = date.getHours()
+    const minutes = date.getMinutes();
     (function loop () {
-      var now = new Date()
+      let now = new Date()
       if (now.getFullYear() === year && now.getMonth() === month && now.getDate() === dateDay &&
         now.getHours() === hours && now.getMinutes() === minutes) {
         cb()
       }
-      now = new Date() // allow for time passing
-      var delay = 60000 - (now % 60000) // exact ms to next minute interval
+      now = new Date()
+      const delay = 60000 - (now % 60000)
       setTimeout(loop, delay)
     })()
   }
 
-  function checkTime (cb, hours, minutes) {
+  function runTimer (cb, hours, minutes) {
     (function loop () {
-      var now = new Date()
+      let now = new Date()
       if (now.getHours() === hours && now.getMinutes() === minutes) {
         cb()
       }
-      now = new Date() // allow for time passing
-      var delay = 60000 - (now % 60000) // exact ms to next minute interval
+      now = new Date()
+      const delay = 60000 - (now % 60000)
       setTimeout(loop, delay)
     })()
   }
 
-  function checkDay (cb, day, hours, minutes) {
+  function runDayTimer (cb, day, hours, minutes) {
     (function loop () {
-      var now = new Date()
+      let now = new Date()
       if (now.getDay() === day && now.getHours() === hours && now.getMinutes() === minutes) {
         cb()
       }
-      now = new Date() // allow for time passing
-      var delay = 60000 - (now % 60000) // exact ms to next minute interval
+      now = new Date()
+      const delay = 60000 - (now % 60000)
       setTimeout(loop, delay)
     })()
   }
@@ -89,35 +89,35 @@ let extraFunctions = (function () {
           index = i
         }
       })
-      let extraFun = {
+      const extraFun = {
         func: String(fun),
         interval: timeHoursInterval
       }
       targetEvent.extraFuncs.push(extraFun)
       window.localStorage.setItem(index + ' ', JSON.stringify(targetEvent))
       eventCalendar.updateEvents()
-      let eventDate = targetEvent.date
-      let funcDate = eventDate.substring(0, 11) + (+eventDate.substring(11, 13) - timeHoursInterval) + eventDate.substring(13, 17)
-      let funcTime = new Date(toMsConverter(funcDate))
-      let funcHours = funcTime.getHours()
-      let funcMinutes = funcTime.getMinutes()
+      const eventDate = targetEvent.date
+      const funcDate = eventDate.substring(0, 11) + (+eventDate.substring(11, 13) - timeHoursInterval) + eventDate.substring(13, 17)
+      const funcTime = new Date(toMsConverter(funcDate))
+      const funcHours = funcTime.getHours()
+      const funcMinutes = funcTime.getMinutes()
       switch (targetEvent.repeat) {
         case 'no':
-          checkDate(fun, funcTime)
+          runEventTimer(fun, funcTime)
           break
         case 'everyDay':
-          checkTime(fun, funcHours, funcMinutes)
+          runTimer(fun, funcHours, funcMinutes)
           break
         default:
           let day = targetEvent.repeat
           if (day === 7) day = 0
-          checkDay(fun, day, funcHours, funcMinutes)
+          runDayTimer(fun, day, funcHours, funcMinutes)
           break
       }
     },
     forAllEvents: function (fun, timeHoursInterval) {
       let events = eventsStorage.getAllEvents()
-      let extraFun = {
+      const extraFun = {
         func: String(fun),
         interval: timeHoursInterval
       }
@@ -151,8 +151,8 @@ let extraFunctions = (function () {
             fun()
           }
         })
-        let now = new Date() // allow for time passing
-        var delay = 60000 - (now % 60000) // exact ms to next minute interval
+        let now = new Date()
+        const delay = 60000 - (now % 60000)
         setTimeout(loop, delay)
       })()
     }
