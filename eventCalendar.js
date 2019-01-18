@@ -1,30 +1,88 @@
-let eventCalendar = (function () {
-  let events = []
-
-  if (Object.keys(window.localStorage).length > 0) {
-    for (let key in window.localStorage) {
-      events[+key.slice(0, key.length - 1)] = JSON.parse(window.localStorage.getItem(key))
+let eventsStorage = (function () {
+  return {
+    getAllEvents: function () {
+      let events = []
+      for (let key in window.localStorage) {
+        let item = window.localStorage.getItem(key)
+        if (String(item).charAt(0) !== '{') break
+        let currentEvent = JSON.parse(item)
+        let n = 0
+        let property = ''
+        let filter = true
+        for (let prop in currentEvent) {
+          switch (n) {
+            case 0: property = 'title'
+              break
+            case 1: property = 'date'
+              break
+            case 2: property = 'id'
+              break
+            case 3: property = 'callback'
+              break
+            case 4: property = 'timerId'
+              break
+            case 5: property = 'repeat'
+              break
+            case 6: property = 'extraFuncs'
+              break
+          }
+          if (prop === property) {
+            filter = true
+          } else {
+            filter = false
+          }
+          n++
+        }
+        if (filter) {
+          events[events.length] = currentEvent
+        }
+      }
+      return events
+    },
+    updateLocalStorage: function () {
+      window.localStorage.clear()
+      eventCalendar.getAllEvents().forEach(function (item, i, arr) {
+        window.localStorage.setItem(i + ' ', JSON.stringify(item))
+      })
     }
+  }
+})()
 
-    events.forEach(function (item) {
-      if (Date.now() < toMsConverter(item.date)) {
+let eventCalendar = (function () {
+  let events = eventsStorage.getAllEvents()
+  events.forEach(function (item) {
+    if (Date.now() < toMsConverter(item.date)) {
+      if (item.repeat === 'no') {
         let func = new Function(item.callback.slice(11, item.callback.length))
         item.timerId = setTimeout(func, toMsConverter(item.date) - Date.now())
       }
-    })
+    }
+  })
+  function checkDate (cb, date) {
+    let year = date.getFullYear()
+    let month = date.getMonth()
+    let dateDay = date.getDate()
+    let hours = date.getHours()
+    let minutes = date.getMinutes()
+    let i = 0;
+    (function loop () {
+      if (i === 1) return
+      var now = new Date()
+      if (now.getFullYear() === year && now.getMonth() === month && now.getDate() === dateDay &&
+        now.getHours() === hours && now.getMinutes() === minutes) {
+        cb()
+        i = 1
+      }
+      now = new Date() // allow for time passing
+      var delay = 60000 - (now % 60000) // exact ms to next minute interval
+      setTimeout(loop, delay)
+    })()
   }
+
   function toMsConverter (date) {
     let dateForParse = date.slice(0, 10) + 'T' + date.slice(11, 17)
     return Date.parse(dateForParse)
   }
-
-  function updateLocalStorage (array) {
-    window.localStorage.clear()
-    array.forEach(function (item, i, arr) {
-      window.localStorage.setItem(i + ' ', JSON.stringify(item))
-    })
-  }
-
   return {
     setEvent: function (titleEvent, dateEvent, callback) {
       let event = {
@@ -32,11 +90,19 @@ let eventCalendar = (function () {
         date: dateEvent,
         id: Math.random().toString(36).substr(2, 9),
         callback: String(callback),
-        timerId: setTimeout(callback, toMsConverter(dateEvent) - Date.now())
+        timerId: 0,
+        repeat: 'no',
+        extraFuncs: []
       }
 
+      if (toMsConverter(dateEvent) > Date.now()) {
+        checkDate(callback, new Date(toMsConverter(event.date)))
+      }
+
+      events = eventsStorage.getAllEvents()
       events.push(event)
-      updateLocalStorage(events)
+      eventsStorage.updateLocalStorage()
+      return event
     },
 
     getEvents: function (startTime, endTime) {
@@ -54,7 +120,7 @@ let eventCalendar = (function () {
           delete arr.splice(i, 1)
         }
       })
-      updateLocalStorage(events)
+      eventsStorage.updateLocalStorage()
     },
 
     changeEventTitle: function (id, newTitle) {
@@ -63,19 +129,25 @@ let eventCalendar = (function () {
           item.title = newTitle
         }
       })
-      updateLocalStorage(events)
+      eventsStorage.updateLocalStorage()
     },
 
     changeEventDate: function (id, newDate) {
       events.forEach(function (item) {
         if (item.id === id) {
-          clearTimeout(item.timerId)
           item.date = newDate
           let func = new Function(item.callback.slice(11, item.callback.length))
-          item.timerId = setTimeout(func, toMsConverter(newDate) - Date.now())
+          checkDate(func, new Date(toMsConverter(item.date)))
         }
       })
-      updateLocalStorage(events)
+      eventsStorage.updateLocalStorage()
+    },
+    /* Метод для проверки, не забыть удалить!! */
+    getAllEvents: function () {
+      return events
+    },
+    updateEvents: function () {
+      events = eventsStorage.getAllEvents()
     }
   }
 })()
