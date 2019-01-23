@@ -1,46 +1,134 @@
 const eventsStorage = (function () {
   return {
     getAllEvents: function () {
-      return JSON.parse(window.localStorage.getItem('events'))
+      return JSON.parse(window.localStorage.getItem('events')) || [];
     },
     updateLocalStorage: function (events) {
-      window.localStorage.removeItem('events')
-      window.localStorage.setItem('events', JSON.stringify(events))
+      window.localStorage.removeItem('events');
+      window.localStorage.setItem('events', JSON.stringify(events));
     }
   }
-})()
+})();
 
-const eventCalendar = (function () {
+function EventCalendar() {
+  this.events = eventsStorage.getAllEvents();
+}
+
+EventCalendar.prototype.toMsConverter = function (date) {
+    const dateForParse = date.slice(0, 10) + 'T' + date.slice(11, 17);
+    return Date.parse(dateForParse);
+  };
+
+EventCalendar.prototype.runEventTimer = function () {
+  const self = this;
+  (function loop() {
+    let now = new Date();
+    if (self.events.length > 0) {
+      self.events.forEach(function (item) {
+        let date = new Date(self.toMsConverter(item.date));
+        let year = date.getFullYear();
+        let month = date.getMonth();
+        let dateDay = date.getDate();
+        let hours = date.getHours();
+        let minutes = date.getMinutes();
+        let func = new Function(item.callback.slice(11, item.callback.length));
+        if (now.getFullYear() === year && now.getMonth() === month && now.getDate() === dateDay &&
+          now.getHours() === hours && now.getMinutes() === minutes) {
+          func();
+        }
+      });
+    }
+    setTimeout(function () {loop()}, 60000);
+  })();
+};
+
+EventCalendar.prototype.setEvent = function (titleEvent, dateEvent, callback) {
+  const event = {
+    title: titleEvent,
+    date: dateEvent,
+    id: Math.random().toString(36).substr(2, 9),
+    callback: String(callback)
+  };
+  this.events.push(event);
+  eventsStorage.updateLocalStorage(this.events);
+  return event
+};
+
+EventCalendar.prototype.getDayEvent = function () {
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = date.getMonth();
+  const day = date.getDate();
+  return this.events.map(function (event) {
+    let dateEvent = new Date(this.toMsConverter(event.date));
+    return dateEvent.getFullYear() === year && dateEvent.getMonth() === month && dateEvent.getDate() === day;
+  });
+};
+
+EventCalendar.prototype.deleteEvent = function (id) {
+    this.events = this.events.map(function(event){
+      return event.id !== id;
+    });
+    eventsStorage.updateLocalStorage(this.events);
+};
+
+EventCalendar.prototype.changeEventTitle = function (id, newTitle) {
+  this.events = this.events.map(function(event) {
+    if (event.id === id) {
+      return Object.assign({}, event, { title: newTitle });
+    }
+    return event;
+  });
+  eventsStorage.updateLocalStorage(this.events);
+};
+
+EventCalendar.prototype.changeEventDate = function (id, newDate) {
+    this.events.forEach(function (item) {
+      if (item.id === id) {
+        item.date = newDate;
+      }
+    });
+    eventsStorage.updateLocalStorage(this.events);
+};
+
+let eventCalendar1 = new EventCalendar();
+
+eventCalendar1.runEventTimer();
+
+/*const eventCalendar = (function () {
   let events = []
   if (window.localStorage.getItem('events') !== null) {
     events = eventsStorage.getAllEvents()
   }
-  runEventsTimer()
+  runEventsTimer();
+
   function runEventsTimer () {
-    (function loop () {
-      let now = new Date()
-      if (window.localStorage.getItem('events') !== null) {
-        let events = eventsStorage.getAllEvents()
+    function loop () {
+      let now = new Date();
+      if (window.localStorage.getItem('events ') !== null) {
+        let events = eventsStorage.getAllEvents();
         events.forEach(function (item) {
           if (item.repeat === 'no') {
-            const date = new Date(toMsConverter(item.date))
-            const year = date.getFullYear()
-            const month = date.getMonth()
-            const dateDay = date.getDate()
-            const hours = date.getHours()
-            const minutes = date.getMinutes()
-            const func = new Function(item.callback.slice(11, item.callback.length))
+            const date = new Date(toMsConverter(item.date));
+            const year = date.getFullYear();
+            const month = date.getMonth();
+            const dateDay = date.getDate();
+            const hours = date.getHours();
+            const minutes = date.getMinutes();
+            const func = new Function(item.callback.slice(11, item.callback.length));
             if (now.getFullYear() === year && now.getMonth() === month && now.getDate() === dateDay &&
               now.getHours() === hours && now.getMinutes() === minutes) {
-              func()
+              func();
             }
           }
         })
       }
-      now = new Date() // allow for time passing
-      let delay = 60000 - (now % 60000) // exact ms to next minute interval
-      setTimeout(loop, delay)
-    })()
+      now = new Date(); // allow for time passing
+      let delay = 60000 - (now % 60000); // exact ms to next minute interval
+      setTimeout(function() {
+        loop()
+      }, delay)
+    }
   }
   function toMsConverter (date) {
     const dateForParse = date.slice(0, 10) + 'T' + date.slice(11, 17)
@@ -99,7 +187,7 @@ const eventCalendar = (function () {
       const day = date.getDate()
       const year = date.getFullYear()
       const month = date.getMonth()
-      const dayOfWeek = date.getDay()
+      const dayOfWeek = date.getDay();
       let result = []
       events.forEach(function (event) {
         if (event.repeat === 'everyDay' || typeof event.repeat === 'object') {
@@ -128,20 +216,20 @@ const eventCalendar = (function () {
     },
 
     deleteEvent: function (id) {
-      events.forEach(function (item, i, arr) {
-        if (item.id === id) {
-          delete arr.splice(i, 1)
-        }
-      })
+      events = events.filter(function(e){
+        return e.id !== id;
+      });
+
       eventsStorage.updateLocalStorage(events)
     },
 
     changeEventTitle: function (id, newTitle) {
-      events.forEach(function (item) {
-        if (item.id === id) {
-          item.title = newTitle
+      events = events.map(function(e) {
+        if (e.id === id) {
+          return Object.assign({}, e, { title: newTitle })
         }
-      })
+        return e;
+      });
       eventsStorage.updateLocalStorage(events)
     },
 
@@ -160,4 +248,4 @@ const eventCalendar = (function () {
       events = eventsStorage.getAllEvents()
     }
   }
-})()
+})()*/
