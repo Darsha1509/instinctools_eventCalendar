@@ -1,99 +1,127 @@
-const eventsStorage = (function () {
-  return {
-    getAllEvents: function () {
+(function (global, factory) {
+  if (typeof define === 'function' && define.amd) {
+    // AMD
+    define(['./EventCalendar'], factory);
+  } else if (typeof exports === 'object') {
+    // CommonJS
+    module.exports = factory(require('./EventCalendar'));
+  } else {
+    // Browser globals (Note: root is window)
+    global.returnExports = factory(global.EventCalendar);
+  }
+}(this, function (EventCalendarModule) {
+  'use strict';
+
+  var EventCalendar = (function () {
+
+    function getAllEvents() {
       return JSON.parse(window.localStorage.getItem('events')) || [];
-    },
-    updateLocalStorage: function (events) {
+    }
+
+    function updateLocalStorage(events) {
       window.localStorage.removeItem('events');
       window.localStorage.setItem('events', JSON.stringify(events));
     }
-  }
-})();
 
-function EventCalendar() {
-  this.events = eventsStorage.getAllEvents();
-}
+    function toMsConverter(date) {
+      var dateForParse = date.slice(0, 10) + 'T' + date.slice(11, 17);
+      return Date.parse(dateForParse);
+    }
 
-EventCalendar.prototype.toMsConverter = function (date) {
-    const dateForParse = date.slice(0, 10) + 'T' + date.slice(11, 17);
-    return Date.parse(dateForParse);
-  };
+    var events = getAllEvents();
 
-EventCalendar.prototype.runEventTimer = function () {
-  const self = this;
-  (function loop() {
-    let now = new Date();
-    if (self.events.length > 0) {
-      self.events.forEach(function (item) {
-        let date = new Date(self.toMsConverter(item.date));
-        let year = date.getFullYear();
-        let month = date.getMonth();
-        let dateDay = date.getDate();
-        let hours = date.getHours();
-        let minutes = date.getMinutes();
-        let func = new Function(item.callback.slice(11, item.callback.length));
-        if (now.getFullYear() === year && now.getMonth() === month && now.getDate() === dateDay &&
-          now.getHours() === hours && now.getMinutes() === minutes) {
-          func();
+    function runEventTimer() {
+      (function loop() {
+        var now = new Date();
+        if (events.length > 0) {
+          events.forEach(function (item) {
+            var date = new Date(toMsConverter(item.date));
+            var year = date.getFullYear();
+            var month = date.getMonth();
+            var dateDay = date.getDate();
+            var hours = date.getHours();
+            var minutes = date.getMinutes();
+            var func = new Function(item.callback.slice(11, item.callback.length));
+            if (now.getFullYear() === year && now.getMonth() === month && now.getDate() === dateDay &&
+              now.getHours() === hours && now.getMinutes() === minutes) {
+              func();
+            }
+          });
+        }
+        setTimeout(function () {
+          loop()
+        }, 60000);
+      })();
+    }
+
+    runEventTimer();
+
+    var Constructor = function EventCalendar() {
+
+    };
+
+    Constructor.prototype.logEvents = function () {
+      console.log(events);
+    };
+
+    Constructor.prototype.setEvent = function (titleEvent, dateEvent, callback) {
+      var event = {
+        title: titleEvent,
+        date: dateEvent,
+        id: Math.random().toString(36).substr(2, 9),
+        callback: String(callback)
+      };
+      events.push(event);
+      updateLocalStorage(events);
+      return event;
+
+    };
+
+    Constructor.prototype.getDayEvents = function () {
+      var date = new Date();
+      var year = date.getFullYear();
+      var month = date.getMonth();
+      var day = date.getDate();
+      return events.map(function (event) {
+        var dateEvent = new Date(toMsConverter(event.date));
+        return dateEvent.getFullYear() === year && dateEvent.getMonth() === month && dateEvent.getDate() === day;
+      });
+    };
+
+    Constructor.prototype.deleteEvent = function (id) {
+      events = events.map(function (event) {
+        return event.id !== id;
+      });
+      updateLocalStorage(events);
+    };
+
+    Constructor.prototype.changeEventTitle = function (id, newTitle) {
+      events = events.map(function (event) {
+        if (event.id === id) {
+          event.title = newTitle;
+        }
+        return event;
+      });
+      updateLocalStorage(events);
+    };
+
+    Constructor.prototype.changeEventDate = function (id, newDate) {
+      events.forEach(function (item) {
+        if (item.id === id) {
+          item.date = newDate;
         }
       });
-    }
-    setTimeout(function () {loop()}, 60000);
+      updateLocalStorage(events);
+    };
+
+    return Constructor;
   })();
-};
+var calendar = new EventCalendar();
+}));
 
-EventCalendar.prototype.setEvent = function (titleEvent, dateEvent, callback) {
-  const event = {
-    title: titleEvent,
-    date: dateEvent,
-    id: Math.random().toString(36).substr(2, 9),
-    callback: String(callback)
-  };
-  this.events.push(event);
-  eventsStorage.updateLocalStorage(this.events);
-  return event
-};
 
-EventCalendar.prototype.getDayEvent = function () {
-  const date = new Date();
-  const year = date.getFullYear();
-  const month = date.getMonth();
-  const day = date.getDate();
-  return this.events.map(function (event) {
-    let dateEvent = new Date(this.toMsConverter(event.date));
-    return dateEvent.getFullYear() === year && dateEvent.getMonth() === month && dateEvent.getDate() === day;
-  });
-};
 
-EventCalendar.prototype.deleteEvent = function (id) {
-    this.events = this.events.map(function(event){
-      return event.id !== id;
-    });
-    eventsStorage.updateLocalStorage(this.events);
-};
 
-EventCalendar.prototype.changeEventTitle = function (id, newTitle) {
-  this.events = this.events.map(function(event) {
-    if (event.id === id) {
-      return Object.assign({}, event, { title: newTitle });
-    }
-    return event;
-  });
-  eventsStorage.updateLocalStorage(this.events);
-};
-
-EventCalendar.prototype.changeEventDate = function (id, newDate) {
-    this.events.forEach(function (item) {
-      if (item.id === id) {
-        item.date = newDate;
-      }
-    });
-    eventsStorage.updateLocalStorage(this.events);
-};
-
-let eventCalendar1 = new EventCalendar();
-
-eventCalendar1.runEventTimer();
 
 /*const eventCalendar = (function () {
   let events = []

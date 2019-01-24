@@ -1,4 +1,8 @@
-const repeatEvent = (function () {
+var EventCalendar = require('./EventCalendar');
+
+
+
+/*(function () {
   runRepeatTimer()
   function runRepeatTimer () {
     (function loop () {
@@ -26,16 +30,20 @@ const repeatEvent = (function () {
       setTimeout(loop, delay)
     })()
   }
-  return {
-    setEveryDayEvent: function (titleEvent, dateEvent, callback) {
-      let repeatedEvent = eventCalendar.setEvent(titleEvent, dateEvent, callback)
-      repeatedEvent.repeat = 'everyDay'
-      eventsStorage.updateLocalStorage(eventCalendar.getAllEvents())
-    },
-    setRepeatInWeekDayEvent: function (titleEvent, dateEvent, callback, daysOfWeek) {
-      let repeatedEvent = eventCalendar.setEvent(titleEvent, dateEvent, callback)
-      repeatedEvent.repeat = daysOfWeek
-      eventsStorage.updateLocalStorage(eventCalendar.getAllEvents())
-    }
+  eventCalendar.setEveryDayEvent = function (titleEvent, dateEvent, callback) {
+    let repeatedEvent = eventCalendar.setEvent(titleEvent, dateEvent, callback)
+    repeatedEvent.repeat = 'everyDay'
+    eventsStorage.updateLocalStorage(eventCalendar.getAllEvents())
+  };
+  eventCalendar.setRepeatInWeekDayEvent = function (titleEvent, dateEvent, callback, daysOfWeek) {
+    let repeatedEvent = eventCalendar.setEvent(titleEvent, dateEvent, callback)
+    repeatedEvent.repeat = daysOfWeek
+    eventsStorage.updateLocalStorage(eventCalendar.getAllEvents())
+  };
+  var oldSetEvent = eventCalendar.setEvent;
+
+  eventCalendar.setEvent = function (arguments) {
+    oldSetEvent.apply(eventCalendar, arguments);
+    console.log(arguments);
   }
-})()
+})();*/
